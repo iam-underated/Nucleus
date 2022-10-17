@@ -1,4 +1,4 @@
-import { dialog, fs } from "@tauri-apps/api";
+import { dialog, fs, invoke } from "@tauri-apps/api";
 import { readTextFile } from "@tauri-apps/api/fs";
 import { sep } from "@tauri-apps/api/path";
 import { filetree } from "./TreeStore";
@@ -8,6 +8,7 @@ export async function data() {
     let dirname = await dialog.open({ directory: true }) as string;
     if (dirname === null) return;
     dir = dirname;
+    invoke("watch", {path: dir});
     return await loadTree();
 }
 

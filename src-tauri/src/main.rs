@@ -3,8 +3,9 @@
     windows_subsystem = "windows"
 )]
 
-use std::env;
+use std::{env};
 use std::process::Command;
+
 #[tauri::command]
 fn open_in_explorer(path: &str) {
     // FOR OTHER OS REFER - https://doc.rust-lang.org/std/env/consts/constant.OS.html
@@ -42,9 +43,15 @@ fn open_terminal(path: &str) {
     }
 }
 
+mod directory;
+#[tauri::command]
+fn watch(path: String) {
+    directory::directory_watcher(Box::leak(path.into_boxed_str())); // a horrible workaround because im stupid and rust confuses me so this is all i got :/
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![open_in_explorer, open_terminal])
+        .invoke_handler(tauri::generate_handler![open_in_explorer, open_terminal, watch])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
