@@ -83,6 +83,7 @@
     bind:this={ref}
     role="treeitem"
     {id}
+    title={path}
     tabindex={disabled ? undefined : -1}
     aria-current={id === $activeNodeId || undefined}
     aria-selected={disabled ? undefined : $selectedNodeIds.includes(id)}
@@ -164,7 +165,7 @@
 {/if}
 
 {#if contextmenu}
-<ParentNodeMenu target={[refLabel]} filename={name} filepath={path}></ParentNodeMenu>
+<ParentNodeMenu target={[refLabel]} children={children} filename={name} filepath={path}></ParentNodeMenu>
 {/if}
 
 <style>

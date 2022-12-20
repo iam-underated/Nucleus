@@ -7,6 +7,8 @@
     import { filetree, workspacename } from "./scripts/TreeStore";
     import { data, workspace } from "./scripts/TreeData";
     import { addFileTab } from "../Tabs/scripts/Tab";
+    import { InlineLoading } from "carbon-components-svelte";
+    import { loadingtree } from "./scripts/TreeData";
     let treeview = null;
     let tree = $filetree;
 
@@ -19,36 +21,48 @@
         let name = $workspacename;
         workspacename.subscribe(n => name = n);
     });
+
+    async function loadTree() {
+        let treedata = await data();
+        if (treedata === undefined) {
+            loadingtree.set(false);
+            return;
+        }
+        filetree.set(treedata);
+        workspacename.set(workspace());
+        loadingtree.set(false);
+    }
 </script>
 
 <div id="explorer-toolbar">
     <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="toolbar-button" on:click={treeview?.collapseAll}>
+    <div class="toolbar-button" title="Collapse all open folders" on:click={treeview?.collapseAll}>
         <ArrowUp />
     </div>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="toolbar-button" on:click={ async() => {if (tree.length > 0) await updateTree();}}>
+    <div class="toolbar-button" title="Refresh filetree view" on:click={ async() => {if (tree.length > 0) await updateTree();}}>
         <WatsonHealthRotate_360 />
     </div>
 </div>
 
-{#if tree.length==0}
+{#if tree.length==0 || $loadingtree}
     <div class="container">
+        {#if $loadingtree}
+        <InlineLoading description="Loading workspace..."></InlineLoading>
+        {:else}
         <div class="text-form">
             You have not yet opened a folder.
         </div>
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div class="toolbar-button-mx" on:click ={async() => { 
-            let treedata = await data();
-            if (treedata === undefined) return;
-            filetree.set(treedata);
-            workspacename.set(workspace());
+            await loadTree();
         }
         }>Open Folder</div>
+        {/if}
     </div>
+{:else}
+    <TreeView isFileTree dblclick bind:this={treeview} size="compact" hideLabel children={tree} on:select={openTab}></TreeView>
 {/if}
-
-<TreeView isFileTree dblclick bind:this={treeview} size="compact" hideLabel children={tree} on:select={openTab}></TreeView>
 
 
 <style>

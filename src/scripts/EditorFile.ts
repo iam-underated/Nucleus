@@ -1,8 +1,10 @@
-import { readTextFile, writeFile } from "@tauri-apps/api/fs";
+import { readTextFile } from "@tauri-apps/api/fs";
 import { extname, sep } from "@tauri-apps/api/path";
-import { dialog, fs } from "@tauri-apps/api";
+import { dialog, fs, path } from "@tauri-apps/api";
 import { setActive, tablist } from "../components/Tabs/scripts/Tab";
 import { getLang } from "../components/Editor/scripts/Editor";
+import { updateTree } from "../components/FileTree/scripts/TreeData";
+import { invoke } from "@tauri-apps/api/tauri";
 
 export class EditorFile {
     filename: string;
@@ -10,12 +12,14 @@ export class EditorFile {
     content: string;
     linefeed: string;
     language;
-    constructor(filename: string, path: string, linefeed: string, language, content: string) {
+    support: boolean;
+    constructor(filename: string, path: string, linefeed: string, language, content: string, support = true) {
         this.filename = filename;
         this.path = path;
         this.linefeed = linefeed;
         this.content = content;
         this.language = language;
+        this.support = support;
     }
 }
 export async function getFile() {
@@ -30,6 +34,7 @@ export async function getFileData(path = "", label = "") {
     let content = "";
     let linefeed = "LF";
     let ext = "txt";
+    let support = true;
     if (path !== "") {
         try {
             ext = await extname(path);
@@ -42,10 +47,11 @@ export async function getFileData(path = "", label = "") {
             content = await readTextFile(path);
         } catch (error) {
             console.log("Cannot read file content. Skipping...");
+            support = false;
         }
         linefeed = content.includes("\r\n") ? "CLRF" : "LF";
     }
-    return new EditorFile(filename, path, linefeed, language, content);
+    return new EditorFile(filename, path, linefeed, language, content, support);
 }
 export async function saveFile() {
     for (let tab of tablist) {
@@ -60,11 +66,14 @@ export async function saveFile() {
                 tab.content.setFileInfo(file);
                 tab.label = label;
                 tab.path = path;
-                tab.saved = !tab.saved;
+                tab.saved = true;
                 setActive(tab.id);
+                await updateTree();
             }
             else {
+                tab.saved = true;
                 await fs.writeFile(tab.path, tab.content.getFileContent());
+                setActive(tab.id);
             }
             break;
         }
@@ -82,6 +91,17 @@ export async function saveFileAs() {
             tab.label = label;
             tab.path = path;
             tab.saved = !tab.saved;
+            setActive(tab.id);
+            await updateTree();
+            break;
+        }
+    }
+}
+
+export function updateSaveState() {
+    for (const tab of tablist) {
+        if (tab.active && tab.isfile) {
+            tab.saved = false;
             setActive(tab.id);
             break;
         }
@@ -107,5 +127,22 @@ export function setFileLanguage(lang, mode = null) {
             tab.content.setLanguage(lang, mode);
             break;
         }
+    }
+}
+
+export async function deleteFile(filepath, force = false) {
+    if (force) {
+        await fs.removeFile(filepath);
+    }
+    else {
+        await invoke("delete_file", {path: filepath});
+    }
+}
+export async function deleteDir(filepath, force = false) {
+    if (force) {
+        await fs.removeDir(filepath, {recursive: true});
+    }
+    else {
+        await invoke("delete_file", {path: filepath});
     }
 }

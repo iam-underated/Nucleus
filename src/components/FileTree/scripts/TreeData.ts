@@ -1,14 +1,15 @@
 import { dialog, fs } from "@tauri-apps/api";
-import { readTextFile } from "@tauri-apps/api/fs";
 import { sep } from "@tauri-apps/api/path";
-import { EditorFile } from "../../../scripts/EditorFile";
+import { writable } from "svelte/store";
 import { filetree } from "./TreeStore";
 let parentname: string;
 let dir;
+export let loadingtree = writable(false);
 export async function data() {
     let dirname = await dialog.open({ directory: true }) as string;
     if (dirname === null) return;
     dir = dirname;
+    loadingtree.set(true);
     return await loadTree();
 }
 
@@ -17,8 +18,8 @@ async function loadTree() {
     id = 0;
     cache = [];
     let nodes = buildTree(sort(children));
-    parentname = dir.split("\\").pop();
-    let tree = [{id: -1, name: dir.split("\\").pop(), children: nodes, path: dir}];
+    parentname = dir.split(sep).pop();
+    let tree = [{id: -1, name: dir.split(sep).pop(), children: nodes, path: dir}];
     return tree;
 }
 
